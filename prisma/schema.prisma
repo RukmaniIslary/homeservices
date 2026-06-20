@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String
+  phone     String
+  address   String
+  apartment String?
+  city      String
+  state     String
+  zip       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings  Booking[]
+  reviews   Review[]
+
+  @@map("customers")
+}
+
+model Service {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String
+  shortDescription     String
+  basePrice            Float
+  minimumPrice         Float
+  emergencyFee         Float    @default(0)
+  depositAmount        Float
+  depositType          String   @default("fixed") // "fixed" | "percentage"
+  durationEstimate     String
+  technicianRequirements String?
+  imageUrl             String?
+  icon                 String?
+  metaTitle            String?
+  metaDescription      String?
+  isActive             Boolean  @default(true)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  bookings     Booking[]
+  serviceAreas ServiceArea[]
+
+  @@map("services")
+}
+
+model Technician {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String
+  specialty   String[]
+  rating      Float    @default(5.0)
+  isAvailable Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@map("technicians")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingNumber   String        @unique @default(cuid())
+  customerId      String
+  serviceId       String
+  technicianId    String?
+  status          BookingStatus @default(PENDING)
+  scheduledDate   DateTime
+  scheduledTime   String
+  isEmergency     Boolean       @default(false)
+  serviceNotes    String?
+  basePrice       Float
+  emergencyFee    Float         @default(0)
+  totalPrice      Float
+  depositAmount   Float
+  remainingBalance Float
+  paddleTransactionId String?
+  depositPaidAt   DateTime?
+  arrivedAt       DateTime?
+  completedAt     DateTime?
+  customerSignature String?
+  technicianNotes String?
+  photos          String[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+  technician  Technician? @relation(fields: [technicianId], references: [id])
+  payment     Payment?
+  invoice     Invoice?
+  review      Review?
+
+  @@map("bookings")
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  bookingId           String        @unique
+  paddleTransactionId String?       @unique
+  paddleCustomerId    String?
+  amount              Float
+  currency            String        @default("USD")
+  status              PaymentStatus @default(PENDING)
+  type                String        @default("deposit") // "deposit" | "final"
+  paidAt              DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@map("payments")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  bookingId     String        @unique
+  invoiceNumber String        @unique
+  totalAmount   Float
+  depositPaid   Float
+  balanceDue    Float
+  status        InvoiceStatus @default(DRAFT)
+  issuedAt      DateTime?
+  dueAt         DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@map("invoices")
+}
+
+model ServiceArea {
+  id        String   @id @default(cuid())
+  serviceId String
+  state     String
+  city      String
+  zip       String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@map("service_areas")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  customerId String
+  rating     Int
+  comment    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("reviews")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entity     String
+  entityId   String
+  userId     String?
+  userRole   String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin")
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("admin_users")
+}
+
+model BlogPost {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  excerpt         String
+  content         String
+  imageUrl        String?
+  metaTitle       String?
+  metaDescription String?
+  isPublished     Boolean  @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("blog_posts")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DISPATCHED
+  EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+}
