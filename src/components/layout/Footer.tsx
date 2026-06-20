@@ -13,6 +13,7 @@ export default function Footer() {
     { label: "Locations", href: "/locations" },
     { label: "Contact", href: "/contact" },
     { label: "Privacy Policy", href: "/privacy" },
+    { label: "Refund Policy", href: "/refund-policy" },
     { label: "Terms of Service", href: "/terms" },
   ];
 
@@ -155,6 +156,7 @@ export default function Footer() {
           <div style={{ display: "flex", gap: "20px" }}>
             {[
               { label: "Privacy", href: "/privacy" },
+              { label: "Refund Policy", href: "/refund-policy" },
               { label: "Terms", href: "/terms" },
               { label: "Sitemap", href: "/sitemap.xml" },
             ].map((item) => (
