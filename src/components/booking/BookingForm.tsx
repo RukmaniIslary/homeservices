@@ -149,11 +149,13 @@ function BookingFormInner() {
     try {
       const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Booking failed");
+      if (!res.ok) throw new Error(data.error || `Server error: ${res.status}`);
       if (data.checkoutUrl) { window.location.href = data.checkoutUrl; }
       else { setBookingResult(data); setStep(4); }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      const msg = e instanceof Error ? e.message : "Something went wrong. Please try again.";
+      setError(msg);
+      console.error("Booking error:", msg);
     } finally { setIsSubmitting(false); }
   };
 
