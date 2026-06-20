@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
           customer: { email: data.email },
           custom_data: { booking_id: booking.id, booking_number: bookingNumber },
           checkout: {
-            url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/confirmation?booking=${bookingNumber}`,
+            url: `${process.env.PADDLE_CHECKOUT_RETURN_URL || process.env.NEXT_PUBLIC_APP_URL}/booking/confirmation?booking=${bookingNumber}`,
           },
         }),
       });
