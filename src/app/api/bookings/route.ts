@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     // Create Paddle checkout URL
     const paddleApiKey = process.env.PADDLE_API_KEY;
-    const paddleEnv = process.env.NEXT_PUBLIC_PADDLE_ENV || "sandbox";
+    const paddleEnv = (process.env.NEXT_PUBLIC_PADDLE_ENV || "sandbox").toLowerCase();
     const paddleBaseUrl =
       paddleEnv === "production"
         ? "https://api.paddle.com"
@@ -113,38 +113,57 @@ export async function POST(req: NextRequest) {
     let checkoutUrl = "";
 
     if (paddleApiKey && paddleApiKey !== "your_paddle_api_key") {
-      try {
-        const paddleRes = await fetch(`${paddleBaseUrl}/transactions`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${paddleApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            items: [
-              {
-                price: {
-                  description: `${serviceData.name} Service Deposit`,
-                  name: `${serviceData.name} Deposit`,
-                  unit_price: { amount: String(Math.round(depositAmount * 100)), currency_code: "USD" },
-                  quantity: { minimum: 1, maximum: 1 },
-                  product: { name: `${serviceData.name} Service`, tax_category: "service" },
-                },
-                quantity: 1,
+      const paddleRes = await fetch(`${paddleBaseUrl}/transactions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${paddleApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: [
+            {
+              price: {
+                description: `${serviceData.name} Service Deposit`,
+                name: `${serviceData.name} Deposit`,
+                unit_price: { amount: String(Math.round(depositAmount * 100)), currency_code: "USD" },
+                quantity: { minimum: 1, maximum: 1 },
+                product: { name: `${serviceData.name} Service`, tax_category: "service" },
               },
-            ],
-            customer: { email: data.email },
-            custom_data: { booking_id: booking.id, booking_number: bookingNumber },
-            checkout: {
-              url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/confirmation?booking=${bookingNumber}`,
+              quantity: 1,
             },
-          }),
-        });
-        const paddleData = await paddleRes.json();
-        checkoutUrl = paddleData?.data?.checkout?.url || "";
-      } catch {
-        console.error("Paddle checkout creation failed");
+          ],
+          customer: { email: data.email },
+          custom_data: { booking_id: booking.id, booking_number: bookingNumber },
+          checkout: {
+            url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/confirmation?booking=${bookingNumber}`,
+          },
+        }),
+      });
+
+      const paddleData = await paddleRes.json();
+
+      if (!paddleRes.ok) {
+        console.error("Paddle error:", JSON.stringify(paddleData));
+        return NextResponse.json(
+          { error: `Payment setup failed: ${paddleData?.error?.detail || paddleData?.type || "Paddle error"}` },
+          { status: 500 }
+        );
       }
+
+      checkoutUrl = paddleData?.data?.checkout?.url || "";
+
+      if (!checkoutUrl) {
+        console.error("No checkout URL in Paddle response:", JSON.stringify(paddleData));
+        return NextResponse.json(
+          { error: "Payment checkout URL not returned. Please try again." },
+          { status: 500 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: "Payment system not configured. Please contact support." },
+        { status: 500 }
+      );
     }
 
     // Audit log
