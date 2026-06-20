@@ -125,13 +125,20 @@ export async function POST(req: NextRequest) {
               price: {
                 description: `${serviceData.name} Service Deposit`,
                 name: `${serviceData.name} Deposit`,
-                unit_price: { amount: String(Math.round(depositAmount * 100)), currency_code: "USD" },
+                unit_price: {
+                  amount: String(Math.round(depositAmount * 100)),
+                  currency_code: "USD",
+                },
                 quantity: { minimum: 1, maximum: 1 },
-                product: { name: `${serviceData.name} Service`, tax_category: "service" },
+                product: {
+                  name: `${serviceData.name} Service`,
+                  tax_category: "standard",
+                },
               },
               quantity: 1,
             },
           ],
+          currency_code: "USD",
           customer: { email: data.email },
           custom_data: { booking_id: booking.id, booking_number: bookingNumber },
           checkout: {
@@ -143,9 +150,10 @@ export async function POST(req: NextRequest) {
       const paddleData = await paddleRes.json();
 
       if (!paddleRes.ok) {
-        console.error("Paddle error:", JSON.stringify(paddleData));
+        const errDetail = paddleData?.error?.detail || paddleData?.errors?.[0]?.detail || JSON.stringify(paddleData);
+        console.error("Paddle error:", errDetail);
         return NextResponse.json(
-          { error: `Payment setup failed: ${paddleData?.error?.detail || paddleData?.type || "Paddle error"}` },
+          { error: `Payment setup failed: ${errDetail}` },
           { status: 500 }
         );
       }
